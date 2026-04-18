@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+  		    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+
+    <bean class="org.openmrs.ui.framework.formatter.HandlebarsFormatterFactory">
+        <property name="forClass" value="org.openmrs.Visit"/>
+        <property name="template">
+            <value>{{format visitType}} {{message 'uiframework.visit.atLocation'}} {{format location}} {{message 'uiframework.visit.fromDate'}} {{format startDatetime}} {{#stopDatetime}}{{message 'uiframework.visit.toDate'}} {{format stopDatetime}}{{/stopDatetime}}</value>
+        </property>
+    </bean>
+
+</beans>

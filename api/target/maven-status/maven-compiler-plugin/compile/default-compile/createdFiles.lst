@@ -1,0 +1,7 @@
+org/openmrs/module/nationalhistory/api/NationalHistoryService.class
+org/openmrs/module/nationalhistory/api/model/HistoryRecord.class
+org/openmrs/module/nationalhistory/api/impl/NationalHistoryServiceImpl$1.class
+org/openmrs/module/nationalhistory/NationalHistoryActivator.class
+org/openmrs/module/nationalhistory/api/impl/NationalHistoryServiceImpl.class
+org/openmrs/module/nationalhistory/api/impl/NationalHistoryServiceImpl$CacheEntry.class
+org/openmrs/module/nationalhistory/NationalHistoryConstants.class

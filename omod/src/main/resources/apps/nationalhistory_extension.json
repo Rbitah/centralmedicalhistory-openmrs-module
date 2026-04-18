@@ -1,0 +1,11 @@
+[
+  {
+    "id": "${project.parent.groupId}.${project.parent.artifactId}.patientDashboard.nationalHistory",
+    "extensionPointId": "patientDashboard.secondColumnFragments",
+    "order": 120,
+    "extensionParams": {
+      "provider": "${project.parent.artifactId}",
+      "fragment": "nationalhistory/history"
+    }
+  }
+]

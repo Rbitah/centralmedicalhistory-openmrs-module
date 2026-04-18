@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module configVersion="1.2">
+
+    <id>${project.parent.artifactId}</id>
+    <name>${project.parent.name}</name>
+    <version>${project.parent.version}</version>
+    <package>${project.parent.groupId}.${project.parent.artifactId}</package>
+    <author>OpenMRS Developers</author>
+    <description>${project.parent.description}</description>
+    <require_version>2.0.* - 2.*</require_version>
+
+    <require_modules>
+        <require_module version="${uiframeworkVersion}">org.openmrs.module.uiframework</require_module>
+        <require_module version="${webservices.restVersion}">org.openmrs.module.webservices.rest</require_module>
+        <require_module version="1.* - 2.*">org.openmrs.module.fhir2</require_module>
+    </require_modules>
+
+    <activator>${project.parent.groupId}.${project.parent.artifactId}.NationalHistoryActivator</activator>
+
+    <extension>
+        <point>org.openmrs.referenceapplication.patientDashboard.secondColumnFragments</point>
+        <class>${project.parent.groupId}.${project.parent.artifactId}.extension.html.NationalHistoryDashboardExtension</class>
+    </extension>
+
+    <globalProperty>
+        <property>nationalhistory.fhir.baseUrl</property>
+        <defaultValue></defaultValue>
+        <description>Base URL of the external MPI FHIR R4 server</description>
+    </globalProperty>
+
+    <globalProperty>
+        <property>nationalhistory.fhir.token</property>
+        <defaultValue></defaultValue>
+        <description>Optional bearer token for the external MPI FHIR server</description>
+    </globalProperty>
+
+    <messages>
+        <lang>en</lang>
+        <file>messages.properties</file>
+    </messages>
+</module>

@@ -1,0 +1,11 @@
+[
+  {
+    "id": "org.openmrs.module.nationalhistory.patientDashboard.nationalHistory",
+    "extensionPointId": "patientDashboard.secondColumnFragments",
+    "order": 120,
+    "extensionParams": {
+      "provider": "nationalhistory",
+      "fragment": "nationalhistory/history"
+    }
+  }
+]

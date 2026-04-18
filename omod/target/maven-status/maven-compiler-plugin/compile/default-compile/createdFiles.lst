@@ -1,0 +1,3 @@
+org/openmrs/module/nationalhistory/web/resource/NationalHistoryResource.class
+org/openmrs/module/nationalhistory/web/representation/NationalHistoryResult.class
+org/openmrs/module/nationalhistory/extension/html/NationalHistoryDashboardExtension.class

@@ -21,6 +21,9 @@ import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.Encounter;
+import org.hl7.fhir.r4.model.AllergyIntolerance;
+import org.hl7.fhir.r4.model.Appointment;
+import org.hl7.fhir.r4.model.DocumentReference;
 import org.hl7.fhir.r4.model.Period;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.Type;
@@ -82,8 +85,11 @@ public class NationalHistoryServiceImpl extends BaseOpenmrsService implements Na
             IGenericClient client = buildClient(baseUrl, token);
 
             List<HistoryRecord> records = new ArrayList<HistoryRecord>();
-            records.addAll(fetchConditions(client, patientIdentifier));
-            records.addAll(fetchEncounters(client, patientIdentifier));
+            records.addAll(safelyFetchConditions(client, patientIdentifier));
+            records.addAll(safelyFetchEncounters(client, patientIdentifier));
+            records.addAll(safelyFetchAllergies(client, patientIdentifier));
+            records.addAll(safelyFetchAppointments(client, patientIdentifier));
+            records.addAll(safelyFetchAttachments(client, patientIdentifier));
             sortByDateDesc(records);
 
             patientCache.put(patientUuid, new CacheEntry(records));
@@ -128,7 +134,7 @@ public class NationalHistoryServiceImpl extends BaseOpenmrsService implements Na
                 referenceDisplay(condition.getAsserter()),
                 DEFAULT_TEXT);
 
-            records.add(new HistoryRecord("Condition", summary, date, facility));
+            records.add(new HistoryRecord(resolveConditionType(condition), summary, date, facility));
         }
 
         return records;
@@ -157,10 +163,147 @@ public class NationalHistoryServiceImpl extends BaseOpenmrsService implements Na
                 encounter.hasLocation() ? referenceDisplay(encounter.getLocationFirstRep().getLocation()) : null,
                 DEFAULT_TEXT);
 
-            records.add(new HistoryRecord("Encounter", summary, date, facility));
+            records.add(new HistoryRecord("Recent Visit", summary, date, facility));
         }
 
         return records;
+    }
+
+    private List<HistoryRecord> fetchAllergies(IGenericClient client, String patientIdentifier) {
+        String url = "AllergyIntolerance?patient.identifier=" + urlEncode(patientIdentifier);
+        List<IBaseResource> resources = fetchBundleResources(client, url);
+
+        List<HistoryRecord> records = new ArrayList<HistoryRecord>();
+        for (IBaseResource resource : resources) {
+            if (!(resource instanceof AllergyIntolerance)) {
+                continue;
+            }
+            AllergyIntolerance allergy = (AllergyIntolerance) resource;
+
+            String summary = firstNonBlank(
+                codeableConceptSummary(allergy.getCode()),
+                allergy.hasCriticality() ? allergy.getCriticality().toCode() : null,
+                allergy.hasClinicalStatus() ? codeableConceptSummary(allergy.getClinicalStatus()) : null,
+                DEFAULT_TEXT);
+            String date = formatDate(allergy.getRecordedDate());
+            String facility = firstNonBlank(
+                referenceDisplay(allergy.getRecorder()),
+                referenceDisplay(allergy.getAsserter()),
+                DEFAULT_TEXT);
+
+            records.add(new HistoryRecord("Allergy", summary, date, facility));
+        }
+
+        return records;
+    }
+
+    private List<HistoryRecord> fetchAppointments(IGenericClient client, String patientIdentifier) {
+        String url = "Appointment?patient.identifier=" + urlEncode(patientIdentifier);
+        List<IBaseResource> resources = fetchBundleResources(client, url);
+
+        List<HistoryRecord> records = new ArrayList<HistoryRecord>();
+        for (IBaseResource resource : resources) {
+            if (!(resource instanceof Appointment)) {
+                continue;
+            }
+            Appointment appointment = (Appointment) resource;
+
+            String summary = firstNonBlank(
+                appointment.hasDescription() ? appointment.getDescription() : null,
+                appointment.hasServiceCategory() ? codeableConceptSummary(appointment.getServiceCategoryFirstRep()) : null,
+                appointment.hasServiceType() ? codeableConceptSummary(appointment.getServiceTypeFirstRep()) : null,
+                appointment.hasAppointmentType() ? codeableConceptSummary(appointment.getAppointmentType()) : null,
+                appointment.hasStatus() ? appointment.getStatus().toCode() : null,
+                DEFAULT_TEXT);
+            String date = formatDate(appointment.hasStart() ? appointment.getStart() : null);
+            String facility = firstNonBlank(
+                appointment.hasParticipant()
+                    ? referenceDisplay(appointment.getParticipantFirstRep().getActor())
+                    : null,
+                DEFAULT_TEXT);
+
+            records.add(new HistoryRecord("Appointment", summary, date, facility));
+        }
+
+        return records;
+    }
+
+    private List<HistoryRecord> fetchAttachments(IGenericClient client, String patientIdentifier) {
+        String url = "DocumentReference?patient.identifier=" + urlEncode(patientIdentifier);
+        List<IBaseResource> resources = fetchBundleResources(client, url);
+
+        List<HistoryRecord> records = new ArrayList<HistoryRecord>();
+        for (IBaseResource resource : resources) {
+            if (!(resource instanceof DocumentReference)) {
+                continue;
+            }
+            DocumentReference documentReference = (DocumentReference) resource;
+
+            String summary = firstNonBlank(
+                documentReference.hasDescription() ? documentReference.getDescription() : null,
+                documentReference.hasType() ? codeableConceptSummary(documentReference.getType()) : null,
+                documentReference.hasCategory() ? codeableConceptSummary(documentReference.getCategoryFirstRep()) : null,
+                DEFAULT_TEXT);
+            String date = formatDate(documentReference.hasDate() ? documentReference.getDate() : null);
+            String facility = firstNonBlank(
+                referenceDisplay(documentReference.getCustodian()),
+                documentReference.hasAuthor() ? referenceDisplay(documentReference.getAuthorFirstRep()) : null,
+                DEFAULT_TEXT);
+
+            records.add(new HistoryRecord("Attachment", summary, date, facility));
+        }
+
+        return records;
+    }
+
+    private List<HistoryRecord> safelyFetchConditions(IGenericClient client, String patientIdentifier) {
+        try {
+            return fetchConditions(client, patientIdentifier);
+        }
+        catch (Exception ex) {
+            log.warn("Failed fetching Condition resources from MPI", ex);
+            return Collections.emptyList();
+        }
+    }
+
+    private List<HistoryRecord> safelyFetchEncounters(IGenericClient client, String patientIdentifier) {
+        try {
+            return fetchEncounters(client, patientIdentifier);
+        }
+        catch (Exception ex) {
+            log.warn("Failed fetching Encounter resources from MPI", ex);
+            return Collections.emptyList();
+        }
+    }
+
+    private List<HistoryRecord> safelyFetchAllergies(IGenericClient client, String patientIdentifier) {
+        try {
+            return fetchAllergies(client, patientIdentifier);
+        }
+        catch (Exception ex) {
+            log.warn("Failed fetching AllergyIntolerance resources from MPI", ex);
+            return Collections.emptyList();
+        }
+    }
+
+    private List<HistoryRecord> safelyFetchAppointments(IGenericClient client, String patientIdentifier) {
+        try {
+            return fetchAppointments(client, patientIdentifier);
+        }
+        catch (Exception ex) {
+            log.warn("Failed fetching Appointment resources from MPI", ex);
+            return Collections.emptyList();
+        }
+    }
+
+    private List<HistoryRecord> safelyFetchAttachments(IGenericClient client, String patientIdentifier) {
+        try {
+            return fetchAttachments(client, patientIdentifier);
+        }
+        catch (Exception ex) {
+            log.warn("Failed fetching DocumentReference resources from MPI", ex);
+            return Collections.emptyList();
+        }
     }
 
     private List<IBaseResource> fetchBundleResources(IGenericClient client, String searchUrl) {
@@ -228,6 +371,26 @@ public class NationalHistoryServiceImpl extends BaseOpenmrsService implements Na
         return firstNonBlank(
             codeableConceptSummary(code),
             DEFAULT_TEXT);
+    }
+
+    private String resolveConditionType(Condition condition) {
+        if (condition != null && condition.hasCategory()) {
+            for (CodeableConcept category : condition.getCategory()) {
+                if (category != null && category.hasCoding()) {
+                    for (Coding coding : category.getCoding()) {
+                        String code = coding != null ? firstNonBlank(coding.getCode(), coding.getDisplay()) : null;
+                        if (StringUtils.isNotBlank(code) && code.toLowerCase().contains("diagnos")) {
+                            return "Diagnosis";
+                        }
+                    }
+                }
+                String text = category != null ? category.getText() : null;
+                if (StringUtils.isNotBlank(text) && text.toLowerCase().contains("diagnos")) {
+                    return "Diagnosis";
+                }
+            }
+        }
+        return "Condition";
     }
 
     private String codeableConceptSummary(CodeableConcept concept) {

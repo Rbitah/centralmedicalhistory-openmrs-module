@@ -14,7 +14,7 @@
 <script type="text/javascript">
     (function () {
         var patientUuid = '${config.patient?.patient?.uuid ?: ""}';
-        var endpoint = '${ui.contextPath()}/ws/rest/v1/nationalhistory/' + patientUuid;
+        var endpoint = '/' + '${ui.contextPath()}' + '/ws/rest/v1/nationalhistory/' + patientUuid;
 
         function escapeHtml(value) {
             return jq('<div/>').text(value || '').html();

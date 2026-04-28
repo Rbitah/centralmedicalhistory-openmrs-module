@@ -7,7 +7,6 @@
 		<!-- Add here beans related to the API context -->
 	<bean id="corePageFactory" class="org.openmrs.ui.framework.page.PageFactory">
 		<property name="additionalControllerProviders">
-			<!-- I tried moving this to a StandardModuleUiConfiguration, but that broke IntregrationTest -->
 			<map>
                 <entry key="uiframework">
                     <bean class="org.openmrs.ui.framework.page.ConventionBasedClasspathPageControllerProvider">
@@ -94,3 +93,4 @@
 	<bean id="notificationManager" class="org.openmrs.ui.framework.notification.NotificationManagerImpl"/>
 			
 </beans>
+s

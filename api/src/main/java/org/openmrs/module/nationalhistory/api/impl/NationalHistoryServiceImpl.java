@@ -54,7 +54,8 @@ public class NationalHistoryServiceImpl extends BaseOpenmrsService implements Na
     @Override
     public List<HistoryRecord> getHistoryRecordsForPatient(String patientUuid) throws APIException {
         if (StringUtils.isBlank(patientUuid)) {
-            throw new APIException("Patient UUID is required");
+            log.warn("Patient UUID is blank. Returning empty national history.");
+            return Collections.emptyList();
         }
 
         CacheEntry cached = patientCache.get(patientUuid);
@@ -64,18 +65,21 @@ public class NationalHistoryServiceImpl extends BaseOpenmrsService implements Na
 
         Patient patient = Context.getPatientService().getPatientByUuid(patientUuid);
         if (patient == null) {
-            throw new APIException("Patient not found");
+            return cacheAndReturnEmpty(patientUuid,
+                "Patient not found for uuid " + patientUuid + ". Returning empty national history.");
         }
 
         String patientIdentifier = resolvePatientIdentifier(patient);
         if (StringUtils.isBlank(patientIdentifier)) {
-            return Collections.emptyList();
+            return cacheAndReturnEmpty(patientUuid,
+                "No usable patient identifier found for patient uuid " + patientUuid + ". Returning empty national history.");
         }
 
         String baseUrl = StringUtils.trimToEmpty(
             Context.getAdministrationService().getGlobalProperty(NationalHistoryConstants.GP_FHIR_BASE_URL));
         if (StringUtils.isBlank(baseUrl)) {
-            throw new APIException("FHIR base URL is not configured");
+            return cacheAndReturnEmpty(patientUuid,
+                "FHIR base URL is not configured. Returning empty national history for patient " + patientUuid + ".");
         }
 
         String token = StringUtils.trimToEmpty(
@@ -96,8 +100,9 @@ public class NationalHistoryServiceImpl extends BaseOpenmrsService implements Na
             return new ArrayList<HistoryRecord>(records);
         }
         catch (Exception ex) {
-            log.error("Unable to fetch National Medical History from external FHIR server", ex);
-            throw new APIException("Unable to fetch National Medical History from external server");
+            log.error("Unable to fetch National Medical History from external FHIR server for patient " + patientUuid
+                    + ". Returning empty list instead.", ex);
+            return cacheAndReturnEmpty(patientUuid, null);
         }
     }
 
@@ -106,6 +111,15 @@ public class NationalHistoryServiceImpl extends BaseOpenmrsService implements Na
         if (StringUtils.isNotBlank(patientUuid)) {
             patientCache.remove(patientUuid);
         }
+    }
+
+    private List<HistoryRecord> cacheAndReturnEmpty(String patientUuid, String logMessage) {
+        if (StringUtils.isNotBlank(logMessage)) {
+            log.warn(logMessage);
+        }
+        List<HistoryRecord> emptyRecords = Collections.emptyList();
+        patientCache.put(patientUuid, new CacheEntry(emptyRecords));
+        return new ArrayList<HistoryRecord>(emptyRecords);
     }
 
     private IGenericClient buildClient(String baseUrl, String token) {

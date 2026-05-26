@@ -1,0 +1,17 @@
+<div class="national-history-dashboard" style="padding: 6px 0;">
+    <div ng-if="loading">Loading national medical history...</div>
+
+    <div ng-if="!loading && error">Unable to load national medical history.</div>
+
+    <div ng-if="!loading && !error && records.length === 0">No national medical history available.</div>
+
+    <div ng-if="!loading && !error && records.length > 0 && fallbackRecords.length > 0">
+        <div><strong>Additional National Records</strong></div>
+        <ul style="margin: 4px 0 10px 18px; padding: 0;">
+            <li ng-repeat="item in fallbackRecords track by $index">
+                [{{item.type || 'Unknown'}}] {{item.summary || 'N/A'}}
+                <span style="color:#777;">({{item.date || 'N/A'}}{{item.facility ? ', ' + item.facility : ''}})</span>
+            </li>
+        </ul>
+    </div>
+</div>

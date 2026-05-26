@@ -1,5 +1,7 @@
 package org.openmrs.module.nationalhistory.web.resource;
 
+import java.util.Collections;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.APIAuthenticationException;
@@ -36,11 +38,11 @@ public class NationalHistoryResource extends DelegatingCrudResource<NationalHist
         }
         catch (APIException ex) {
             log.warn("Unable to retrieve national history for patient " + uniqueId + ": " + ex.getMessage());
-            throw new APIException("Unable to retrieve national history at this time");
+            return new NationalHistoryResult(Collections.emptyList());
         }
         catch (Exception ex) {
             log.error("Unexpected error while retrieving national history", ex);
-            throw new APIException("Unable to retrieve national history at this time");
+            return new NationalHistoryResult(Collections.emptyList());
         }
     }
 

@@ -1,0 +1,14 @@
+{
+  "general": {
+    "sections": {
+      "nationalHistory": {
+        "type": "custom",
+        "displayOrder": 13,
+        "config": {
+          "title": "National Medical History",
+          "template": "<national-history-dashboard section='section' patient='patient'></national-history-dashboard>"
+        }
+      }
+    }
+  }
+}

@@ -16,6 +16,7 @@
     (function () {
         var patientUuid = '${config.patient?.patient?.uuid ?: ""}';
         var endpoint = '/' + '${ui.contextPath()}' + '/ws/rest/v1/nationalhistory/' + patientUuid;
+        var visitsPageUrl = '/' + '${ui.contextPath()}' + '/coreapps/patientdashboard/patientDashboard.page?patientId=' + encodeURIComponent(patientUuid) + '&tab=visits';
 
         function escapeHtml(value) {
             return jq('<div/>').text(value || '').html();
@@ -45,16 +46,20 @@
 
         function groupedRecords(records) {
             var groups = {
+                diagnoses: [],
                 conditions: [],
                 visits: [],
                 allergies: [],
                 appointments: [],
-                attachments: []
+                attachments: [],
+                other: []
             };
 
             jq.each(records, function (index, record) {
                 var type = ((record && record.type) || '').toUpperCase();
-                if (type === 'DIAGNOSIS' || type === 'CONDITION') {
+                if (type === 'DIAGNOSIS') {
+                    groups.diagnoses.push(record);
+                } else if (type === 'CONDITION') {
                     groups.conditions.push(record);
                 } else if (type === 'RECENT VISIT' || type === 'ENCOUNTER') {
                     groups.visits.push(record);
@@ -65,7 +70,7 @@
                 } else if (type === 'ATTACHMENT' || type === 'DOCUMENTREFERENCE') {
                     groups.attachments.push(record);
                 } else {
-                    groups.conditions.push(record);
+                    groups.other.push(record);
                 }
             });
 
@@ -114,7 +119,7 @@
             return list;
         }
 
-        function appendRecordsToSection(body, listId, records, typeLabel) {
+        function appendRecordsToSection(body, listId, records, typeLabel, linkUrl, linkClass) {
             if (!body || body.length === 0 || !records || records.length === 0) {
                 return false;
             }
@@ -124,15 +129,22 @@
                 var summary = record.summary || 'N/A';
                 var date = record.date || 'N/A';
                 var facility = record.facility || 'N/A';
-                var itemHtml = '' +
-                    '<li style="margin:8px 0; border-left:3px solid #2f6f9f; padding:6px 8px; background:#f6f9fc;">' +
+                var itemBody = '' +
                         '<div><strong>' + escapeHtml(summary) + '</strong></div>' +
                         '<div style="font-size:0.9em;">' +
                             '<span>' + escapeHtml(typeLabel) + '</span> | ' +
                             '<span>' + escapeHtml(date) + '</span> | ' +
                             '<span>' + escapeHtml(facility) + '</span>' +
                         '</div>' +
-                        '<div style="font-size:0.85em; color:#555;">Source: National</div>' +
+                        '<div style="font-size:0.85em; color:#555;">Source: National</div>';
+
+                if (linkUrl) {
+                    itemBody = '<a href="' + escapeHtml(linkUrl) + '" class="' + escapeHtml(linkClass || '') + '" style="display:block; color:inherit; text-decoration:none;">' + itemBody + '</a>';
+                }
+
+                var itemHtml = '' +
+                    '<li style="margin:8px 0; border-left:3px solid #2f6f9f; padding:6px 8px; background:#f6f9fc;' + (linkUrl ? ' cursor:pointer;' : '') + '">' +
+                        itemBody +
                     '</li>';
                 list.append(itemHtml);
             });
@@ -144,13 +156,18 @@
             var groups = groupedRecords(records);
             var leftovers = [];
 
-            var conditionsBody = findSectionBodyByHeader(['CONDITIONS', 'DIAGNOSES']);
-            if (!appendRecordsToSection(conditionsBody, 'nationalhistory-conditions-injected', groups.conditions, 'Condition/Diagnosis')) {
+            var diagnosesBody = findSectionBodyByHeader(['DIAGNOSES']);
+            if (!appendRecordsToSection(diagnosesBody, 'nationalhistory-diagnoses-injected', groups.diagnoses, 'Diagnosis')) {
+                leftovers = leftovers.concat(groups.diagnoses);
+            }
+
+            var conditionsBody = findSectionBodyByHeader(['CONDITIONS']);
+            if (!appendRecordsToSection(conditionsBody, 'nationalhistory-conditions-injected', groups.conditions, 'Condition')) {
                 leftovers = leftovers.concat(groups.conditions);
             }
 
             var visitsBody = findSectionBodyByHeader(['RECENT VISITS', 'VISITS']);
-            if (!appendRecordsToSection(visitsBody, 'nationalhistory-visits-injected', groups.visits, 'Recent Visit')) {
+            if (!appendRecordsToSection(visitsBody, 'nationalhistory-visits-injected', groups.visits, 'Recent Visit', visitsPageUrl, 'visit-link')) {
                 leftovers = leftovers.concat(groups.visits);
             }
 
@@ -168,6 +185,8 @@
             if (!appendRecordsToSection(attachmentsBody, 'nationalhistory-attachments-injected', groups.attachments, 'Attachment')) {
                 leftovers = leftovers.concat(groups.attachments);
             }
+
+            leftovers = leftovers.concat(groups.other);
 
             return leftovers;
         }

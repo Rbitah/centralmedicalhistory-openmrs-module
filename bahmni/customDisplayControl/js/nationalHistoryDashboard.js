@@ -53,8 +53,11 @@ angular.module('bahmni.common.displaycontrol.custom')
                 if (type === 'DIAGNOSIS') {
                     return 'diagnoses';
                 }
-                if (type === 'CONDITION' || type === 'ALLERGY') {
+                if (type === 'CONDITION') {
                     return 'conditions';
+                }
+                if (type === 'ALLERGY') {
+                    return 'allergies';
                 }
                 if (type === 'RECENT VISIT' || type === 'ENCOUNTER' || type === 'VISIT') {
                     return 'visits';
@@ -107,7 +110,15 @@ angular.module('bahmni.common.displaycontrol.custom')
                 return list;
             };
 
-            var appendRecord = function (list, record, label) {
+            var buildVisitsPageUrl = function () {
+                if (!$scope.patient || !$scope.patient.uuid) {
+                    return null;
+                }
+                return '/openmrs/coreapps/patientdashboard/patientDashboard.page?patientId=' +
+                    encodeURIComponent($scope.patient.uuid) + '&tab=visits';
+            };
+
+            var appendRecord = function (list, record, label, linkUrl) {
                 var summary = (record && record.summary) || 'N/A';
                 var date = (record && record.date) || 'N/A';
                 var facility = (record && record.facility) || 'N/A';
@@ -115,10 +126,17 @@ angular.module('bahmni.common.displaycontrol.custom')
                 var item = document.createElement('li');
                 item.className = INJECTED_NODE_CLASS;
                 item.style.margin = '4px 0';
-                item.innerHTML =
+                var content =
                     '<span>' + _.escape(summary) + '</span>' +
                     ' <span style="color:#777;">(' + _.escape(date) + ', ' + _.escape(facility) + ')</span>' +
                     ' <span style="font-size:11px;color:#6b6b6b;">[' + _.escape(label) + ']</span>';
+
+                if (linkUrl) {
+                    item.style.cursor = 'pointer';
+                    item.innerHTML = '<a href="' + _.escape(linkUrl) + '" class="visit-link" style="color:inherit;text-decoration:none;">' + content + '</a>';
+                } else {
+                    item.innerHTML = content;
+                }
                 list.appendChild(item);
             };
 
@@ -134,6 +152,7 @@ angular.module('bahmni.common.displaycontrol.custom')
                 var targets = {
                     diagnoses: findSectionByHeader(['Diagnoses']),
                     conditions: findSectionByHeader(['Conditions']),
+                    allergies: findSectionByHeader(['Allergies']),
                     visits: findSectionByHeader(['Visits']),
                     appointments: findSectionByHeader(['Appointments']),
                     patientDocument: findSectionByHeader(['Patient Document'])
@@ -149,7 +168,7 @@ angular.module('bahmni.common.displaycontrol.custom')
                     }
 
                     var list = ensureList(targets[targetKey], targetKey);
-                    appendRecord(list, record, 'National');
+                    appendRecord(list, record, 'National', targetKey === 'visits' ? buildVisitsPageUrl() : null);
                 });
 
                 return {
